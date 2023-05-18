@@ -174,13 +174,29 @@ func (a *auth) login(ctx context.Context, username, password string) (*http.Resp
 		v["captcha"] = []string{solution}
 	}
 
+	v.Set("_phase", "authenticate")
+	v.Set("_process", "1")
+
 	req, err = http.NewRequestWithContext(ctx, http.MethodPost, a.AuthURL, strings.NewReader(v.Encode()))
 	if err != nil {
 		return nil, nil, fmt.Errorf("new request: %w", err)
 	}
+
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
+	for _, cookie := range res.Cookies() {
+		cookie := &http.Cookie{
+			Name:  cookie.Name,
+			Value: cookie.Value,
+		}
+		req.AddCookie(cookie)
+	}
+
 	res, err = a.Client.Do(req)
+	if err != nil {
+		return nil, nil, fmt.Errorf("do request: %w", err)
+	}
+
 	return res, v, err
 }
 
